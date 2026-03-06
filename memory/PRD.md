@@ -47,6 +47,7 @@ Phase 15 (Firm + Portal)      Multi-advocate firm mode, Client Portal (read-only
                                eCourts High Court support (5 HCs)
 Phase 16 (EAS + Emergent)     EAS projectId configured, migrated to Emergent platform
 Phase 17 (WhatsApp)          Hearing reminders, outcome notification, Send Update sheet
+Phase 18 (Bulk Reminders)   Bulk WhatsApp screen, checkbox list, per-item preview, Send All flow
 
 ================================================================================
 CORE BACKEND ROUTES (all prefixed /api)

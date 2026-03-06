@@ -31,6 +31,14 @@ CURRENT STATUS — Phase 16 COMPLETE
 Phase 15 — Multi-Advocate Firm Mode, Client Portal, eCourts High Court   COMPLETE
 Phase 16 — EAS projectId + Emergent platform migration                   COMPLETE
 Phase 17 — WhatsApp Integration for Hearing Reminders                    COMPLETE
+Phase 18 — Bulk WhatsApp Reminder Screen                                 COMPLETE
+  - New screen: /bulk-reminders (expo-router)
+  - Entry: Dashboard "📤 Bulk Remind" button (Tomorrow's Hearings card)
+  - Entry: More tab → TOOLS → "📤 Bulk Reminders"
+  - Checkbox list of tomorrow's hearings with per-row preview/edit modal
+  - "Send All" flow: opens WhatsApp one-by-one with "Mark as Sent?" confirmation overlay
+  - AsyncStorage per-case-per-day sent status (auto-resets next day)
+  - Empty state: "🎉 No hearings tomorrow!" when no hearings
   - Feature 1: Green reminder banner on Case Detail (today/tomorrow hearings)
   - Feature 2: Enhanced outcome notification with outcome text + next date
   - Feature 3: Send Update sheet with 3 templates (General, Doc Request, Next Hearing)
