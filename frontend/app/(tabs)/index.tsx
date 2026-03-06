@@ -293,6 +293,11 @@ const makeStyles = (c: ColorPalette) => StyleSheet.create({
   },
   tmTitle: { fontSize: 13, fontWeight: '700', color: c.textPrimary },
   tmViewAll: { fontSize: 12, fontWeight: '600', color: c.textSecondary },
+  bulkBtn: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: '#E8F5E9', borderRadius: Radius.s,
+  },
+  bulkBtnText: { fontSize: 11, fontWeight: '700', color: '#25D366' },
   tmRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: Spacing.m, paddingVertical: 12,
@@ -604,9 +609,19 @@ export default function DashboardScreen() {
           <View style={styles.tmCard} testID="tomorrow-card">
             <View style={styles.tmHeader}>
               <Text style={styles.tmTitle}>📋 Tomorrow's Hearings</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/calendar' as any)} activeOpacity={0.7}>
-                <Text style={styles.tmViewAll}>View All</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.s }}>
+                <TouchableOpacity
+                  testID="bulk-reminders-btn"
+                  onPress={() => router.push('/bulk-reminders' as any)}
+                  activeOpacity={0.7}
+                  style={styles.bulkBtn}
+                >
+                  <Text style={styles.bulkBtnText}>📤 Bulk Remind</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/calendar' as any)} activeOpacity={0.7}>
+                  <Text style={styles.tmViewAll}>View All</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             {tomorrowHearings.slice(0, 2).map(({ hearing, case: cas }) => {
               const client = clients.find(cl => cl.id === cas.clientId);

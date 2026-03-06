@@ -86,6 +86,7 @@ export default function RootLayout() {
             <Stack.Screen name="export" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="bulk-reminders" options={{ animation: 'slide_from_right' }} />
           </Stack>
         </AppProvider>
       </SafeAreaProvider>

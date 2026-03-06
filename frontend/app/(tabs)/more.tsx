@@ -158,6 +158,7 @@ export default function MoreScreen() {
         {/* TOOLS */}
         <Text style={styles.sectionLabel}>TOOLS</Text>
         <View style={styles.section}>
+          <MenuRow testID="menu-bulk-reminders" label="📤 Bulk Reminders" sub="Send WhatsApp to all clients with hearings tomorrow" onPress={() => router.push('/bulk-reminders' as any)} />
           <MenuRow testID="menu-analytics" label="Analytics" sub="Practice stats and trends" onPress={() => router.push('/analytics' as any)} />
           <MenuRow testID="menu-templates" label="Message Templates" sub="Used in WhatsApp & SMS" onPress={() => router.push('/communication' as any)} />
           <MenuRow testID="menu-search" label="Global Search" sub="Find cases, clients & hearings" onPress={() => router.push('/search' as any)} />
