@@ -1,60 +1,21 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import sys
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+sys.path.insert(0, str(ROOT_DIR))
 
-# Create the main app without a prefix
-app = FastAPI()
+from database import db, _client, ping_db  # noqa: E402
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+app = FastAPI(title="LawFlow API", version="1.0.0")
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# ── CORS ───────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -63,13 +24,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
+# ── LawFlow routes ─────────────────────────────────────────────────────────
+from routes.auth import router as auth_router        # noqa: E402
+from routes.cases import router as cases_router      # noqa: E402
+from routes.clients import router as clients_router  # noqa: E402
+from routes.hearings import router as hearings_router  # noqa: E402
+from routes.ecourts import router as ecourts_router  # noqa: E402
+from routes.notifications import router as notifications_router  # noqa: E402
+from routes.firms import router as firms_router  # noqa: E402
+from routes.client_portal import router as client_portal_router  # noqa: E402
+from scheduler import start_scheduler, stop_scheduler  # noqa: E402
+
+app.include_router(auth_router, prefix="/api")
+app.include_router(cases_router, prefix="/api")
+app.include_router(clients_router, prefix="/api")
+app.include_router(hearings_router, prefix="/api")
+app.include_router(ecourts_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
+app.include_router(firms_router, prefix="/api")
+app.include_router(client_portal_router, prefix="/api")
+
+# ── Logging ────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
+# ── DB connectivity state ──────────────────────────────────────────────────
+_db_connected: bool = False
+
+
+# ── Startup ────────────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def on_startup():
+    global _db_connected
+    _db_connected = await ping_db()
+    start_scheduler(db)  # Start daily digest scheduler
+
+
+# ── Health check ───────────────────────────────────────────────────────────
+@app.get("/api/health")
+async def health():
+    return {
+        "status": "ok",
+        "database": "connected" if _db_connected else "disconnected",
+    }
+
+
+# ── Lifecycle ──────────────────────────────────────────────────────────────
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    stop_scheduler()
+    _client.close()

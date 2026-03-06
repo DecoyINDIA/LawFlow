@@ -1,22 +1,47 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "LawFlow",
+    "slug": "lawflow",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "com.lawflow",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-image.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lawflow",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan and attach case documents and photos.",
+        "NSMicrophoneUsageDescription": "Record voice notes for cases.",
+        "NSPhotoLibraryUsageDescription": "Attach documents from your photo library to cases."
+      }
     },
     "android": {
+      "package": "com.lawflow",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000"
+        "backgroundColor": "#FFFFFF"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -28,15 +53,32 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-image.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#000"
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      "expo-audio",
+      "expo-web-browser",
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Attach documents from your photo library to cases.",
+          "cameraPermission": "Scan and capture case documents."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "940a89bf-27e1-44e1-b036-9f64bc3e92a4"
+      }
+    },
+    "owner": "decoyindia"
   }
 }
