@@ -19,6 +19,10 @@ import { printCaseReport } from '../../src/utils/pdfReports';
 import {
   MESSAGE_TEMPLATES, TemplateKey, applyTemplate,
 } from '../../src/utils/messageTemplates';
+import {
+  buildHearingReminderMessage, buildOutcomeMessage,
+  UPDATE_TEMPLATES, UpdateTemplateKey,
+} from '../../src/utils/whatsappTemplates';
 import { VoiceNotesSection } from '../../src/components/common/VoiceNotesSection';
 import { CaseTimeline } from '../../src/components/common/CaseTimeline';
 import * as ImagePicker from 'expo-image-picker';
@@ -69,6 +73,17 @@ export default function CaseDetailScreen() {
   const sortedHearings = useMemo(() =>
     [...hearings].sort((a, b) => b.hearingDate - a.hearingDate), [hearings]);
 
+  // Feature 1: Detect hearing today or tomorrow for reminder banner
+  const { reminderHearing, isReminderTomorrow } = useMemo(() => {
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(); tomorrowStart.setDate(tomorrowStart.getDate() + 1); tomorrowStart.setHours(0, 0, 0, 0);
+    const tomorrowEnd = new Date(tomorrowStart); tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+    const t0 = todayStart.getTime(); const t1 = tomorrowStart.getTime(); const t2 = tomorrowEnd.getTime();
+    const hToday = hearings.find(h => !h.outcome && h.hearingDate >= t0 && h.hearingDate < t1);
+    const hTomorrow = hearings.find(h => !h.outcome && h.hearingDate >= t1 && h.hearingDate < t2);
+    return { reminderHearing: hTomorrow || hToday, isReminderTomorrow: Boolean(hTomorrow) };
+  }, [hearings]);
+
   // Notification popup state (after updates)
   const [showNotify, setShowNotify] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState('');
@@ -96,6 +111,11 @@ export default function CaseDetailScreen() {
   const [ecourtsLoading, setEcourtsLoading] = useState(false);
   const [ecourtsCourtType, setEcourtsCourtType] = useState<'district' | 'high_court'>('district');
   const [ecourtsHcCode, setEcourtsHcCode] = useState('bombay');
+
+  // ── WhatsApp update sheet state (Feature 3) ────────────────────────────
+  const [showUpdateSheet, setShowUpdateSheet] = useState(false);
+  const [updateTemplateKey, setUpdateTemplateKey] = useState<UpdateTemplateKey>('general_update');
+  const [updateSheetMessage, setUpdateSheetMessage] = useState('');
 
   if (!caseData) {
     return (
@@ -251,8 +271,16 @@ export default function CaseDetailScreen() {
     if (data.nextDate) caseUpdates.nextHearingDate = data.nextDate;
     if (Object.keys(caseUpdates).length > 0) updateCase(caseData.id, caseUpdates);
     if (client) {
-      setNotifyTitle('Notify Client about Update?');
-      setNotifyMessage(generateCaseUpdateMessage(caseData, client.name, advocateName, 'outcome_recorded'));
+      const outcomeMsg = buildOutcomeMessage({
+        clientName: client.name,
+        caseNumber: caseData.caseNumber,
+        courtName: caseData.courtName,
+        outcome: data.outcome,
+        nextDate: data.nextDate,
+        advocateName,
+      });
+      setNotifyTitle('Notify Client about Outcome?');
+      setNotifyMessage(outcomeMsg);
       setShowNotify(true);
     }
   };
@@ -310,6 +338,51 @@ export default function CaseDetailScreen() {
       sendSMSMessage(client.phone, composerMessage);
     }
     setShowComposer(false);
+  };
+
+  // ── Feature 1: Send WhatsApp Hearing Reminder ──────────────────────────
+  const handleSendHearingReminder = () => {
+    if (!client) {
+      Alert.alert('No Client', 'Please link a client to this case first.');
+      return;
+    }
+    if (!client.phone) {
+      Alert.alert(
+        'Phone Number Missing',
+        `${client.name} has no phone number. Add it to send WhatsApp reminders.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Edit Client', onPress: () => router.push(`/clients/${client.id}` as any) },
+        ]
+      );
+      return;
+    }
+    const msg = buildHearingReminderMessage({
+      clientName: client.name,
+      caseNumber: caseData.caseNumber,
+      courtName: caseData.courtName,
+      isTomorrow: isReminderTomorrow,
+      advocateName,
+    });
+    sendWhatsAppMessage(client.phone, msg);
+  };
+
+  // ── Feature 3: Open Send Update bottom sheet ───────────────────────────
+  const handleOpenUpdateSheet = () => {
+    if (!client) {
+      Alert.alert('No Client', 'Please link a client to this case first.');
+      return;
+    }
+    const firstTemplate = UPDATE_TEMPLATES[0];
+    setUpdateTemplateKey(firstTemplate.key);
+    setUpdateSheetMessage(firstTemplate.build({
+      clientName: client.name,
+      caseNumber: caseData.caseNumber,
+      courtName: caseData.courtName,
+      nextHearingDate: caseData.nextHearingDate,
+      advocateName,
+    }));
+    setShowUpdateSheet(true);
   };
 
   // ── Document handlers ──────────────────────────────────────────────
@@ -499,6 +572,7 @@ export default function CaseDetailScreen() {
                 style={styles.smsButton}
                 onPress={handleOpenComposer}
                 activeOpacity={0.8}
+                testID="client-text-btn"
               >
                 <Text style={styles.smsButtonIcon}>📱</Text>
                 <Text style={styles.smsButtonText}>Text</Text>
@@ -507,11 +581,46 @@ export default function CaseDetailScreen() {
                 style={styles.whatsappButton}
                 onPress={handleOpenComposer}
                 activeOpacity={0.8}
+                testID="client-whatsapp-btn"
               >
                 <Text style={styles.whatsappButtonIcon}>💬</Text>
                 <Text style={styles.whatsappButtonText}>WhatsApp</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Feature 3: Send Update button */}
+            <TouchableOpacity
+              testID="send-update-btn"
+              style={styles.sendUpdateBtn}
+              onPress={handleOpenUpdateSheet}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sendUpdateIcon}>📤</Text>
+              <Text style={styles.sendUpdateText}>Send Update</Text>
+            </TouchableOpacity>
+
+            {/* Feature 1: Hearing Reminder Banner — today / tomorrow */}
+            {reminderHearing && (
+              <TouchableOpacity
+                testID="hearing-reminder-banner"
+                style={styles.reminderBanner}
+                onPress={handleSendHearingReminder}
+                activeOpacity={0.85}
+              >
+                <View style={styles.reminderBannerLeft}>
+                  <Text style={styles.reminderBannerEmoji}>📅</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.reminderBannerTitle}>
+                      Hearing {isReminderTomorrow ? 'Tomorrow' : 'Today'} — {caseData.courtName}
+                    </Text>
+                    <Text style={styles.reminderBannerSub} numberOfLines={1}>
+                      Tap to send WhatsApp reminder to {client?.name ?? 'client'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.reminderBannerArrow}>›</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -689,6 +798,100 @@ export default function CaseDetailScreen() {
           <Text style={styles.deleteBtnText}>Delete Case</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Feature 3: Send Update Bottom Sheet */}
+      <Modal visible={showUpdateSheet} transparent animationType="slide" statusBarTranslucent>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity
+            style={styles.composerBackdrop}
+            onPress={() => setShowUpdateSheet(false)}
+            activeOpacity={1}
+          >
+            <View style={styles.composerSheet}>
+              <View style={styles.composerHandle} />
+              <Text style={styles.composerTitle}>Send Update to {client?.name ?? 'Client'}</Text>
+
+              {/* Template selector chips */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.m }}>
+                <View style={{ flexDirection: 'row', gap: Spacing.s, paddingRight: Spacing.m }}>
+                  {UPDATE_TEMPLATES.map(t => (
+                    <TouchableOpacity
+                      key={t.key}
+                      testID={`update-template-${t.key}`}
+                      style={[styles.templateChip, updateTemplateKey === t.key && styles.templateChipActive]}
+                      onPress={() => {
+                        setUpdateTemplateKey(t.key);
+                        if (client) {
+                          setUpdateSheetMessage(t.build({
+                            clientName: client.name,
+                            caseNumber: caseData.caseNumber,
+                            courtName: caseData.courtName,
+                            nextHearingDate: caseData.nextHearingDate,
+                            advocateName,
+                          }));
+                        }
+                      }}
+                    >
+                      <Text style={[styles.templateChipText, updateTemplateKey === t.key && styles.templateChipTextActive]}>
+                        {t.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* Editable message */}
+              <View style={{ marginBottom: Spacing.m }}>
+                <Text style={styles.composerLabel}>MESSAGE</Text>
+                <TextInput
+                  testID="update-sheet-message-input"
+                  style={styles.composerTextInput}
+                  value={updateSheetMessage}
+                  onChangeText={setUpdateSheetMessage}
+                  multiline
+                  textAlignVertical="top"
+                  placeholder="Your message..."
+                  placeholderTextColor={c.textTertiary}
+                />
+              </View>
+
+              {/* Actions */}
+              <View style={{ gap: Spacing.s }}>
+                {!client?.phone ? (
+                  <View style={styles.noPhoneRow}>
+                    <Text style={styles.noPhoneText}>Add client phone number first</Text>
+                    <TouchableOpacity onPress={() => { setShowUpdateSheet(false); if (client) router.push(`/clients/${client.id}` as any); }}>
+                      <Text style={styles.noPhoneLink}>Edit Client →</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    testID="update-sheet-whatsapp-btn"
+                    style={styles.whatsappSendBtn}
+                    onPress={() => {
+                      if (client?.phone) {
+                        sendWhatsAppMessage(client.phone, updateSheetMessage);
+                        setShowUpdateSheet(false);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.whatsappSendIcon}>💬</Text>
+                    <Text style={styles.whatsappSendText}>Send via WhatsApp</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.composerCancelBtn}
+                  onPress={() => setShowUpdateSheet(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.composerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Update Notification Popup */}
       <NotifyClientPopup
@@ -1196,4 +1399,47 @@ const makeStyles = (c: ColorPalette) => StyleSheet.create({
   composerSmsText: { ...Typography.headline, color: c.textPrimary },
   composerCancel: { alignItems: 'center', justifyContent: 'center', height: 44 },
   composerCancelText: { ...Typography.subhead, color: c.textSecondary },
+
+  // ── Feature 1: Hearing Reminder Banner ────────────────────────────────
+  reminderBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#E8F5E9', borderRadius: Radius.m, padding: Spacing.m,
+    marginTop: Spacing.s, borderLeftWidth: 3, borderLeftColor: '#25D366',
+  },
+  reminderBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s, flex: 1 },
+  reminderBannerEmoji: { fontSize: 22 },
+  reminderBannerTitle: { ...Typography.headline, color: '#1B5E20' },
+  reminderBannerSub: { ...Typography.caption1, color: '#2E7D32', marginTop: 2 },
+  reminderBannerArrow: { fontSize: 22, color: '#25D366', marginLeft: Spacing.s },
+
+  // ── Feature 3: Send Update button ─────────────────────────────────────
+  sendUpdateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.s,
+    backgroundColor: '#F0F4FF', borderRadius: Radius.m, height: 44, marginTop: Spacing.s,
+    borderWidth: 1, borderColor: '#C7D4F7',
+  },
+  sendUpdateIcon: { fontSize: 16 },
+  sendUpdateText: { ...Typography.subhead, color: '#3B5BDB', fontWeight: '600' },
+
+  // ── Feature 3: Update Sheet extras ────────────────────────────────────
+  templateChipActive: { backgroundColor: c.textPrimary },
+  templateChipTextActive: { color: c.background },
+  whatsappSendBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.s,
+    backgroundColor: '#25D366', borderRadius: Radius.m, height: 50,
+  },
+  whatsappSendIcon: { fontSize: 20 },
+  whatsappSendText: { ...Typography.headline, color: '#fff' },
+  composerTextInput: {
+    backgroundColor: c.surface, borderRadius: Radius.m,
+    padding: Spacing.m, minHeight: 120, maxHeight: 200,
+    ...Typography.body, color: c.textPrimary,
+  },
+  composerCancelBtn: { alignItems: 'center', justifyContent: 'center', height: 44 },
+  noPhoneRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: c.surface, borderRadius: Radius.m, padding: Spacing.m,
+  },
+  noPhoneText: { ...Typography.subhead, color: c.textSecondary },
+  noPhoneLink: { ...Typography.subhead, color: '#3B5BDB', fontWeight: '600' },
 });

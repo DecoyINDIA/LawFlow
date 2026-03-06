@@ -71,3 +71,18 @@ async def send_digest_now(
     from scheduler import send_digest_to_advocate
     result = await send_digest_to_advocate(db, advocate["id"])
     return {"success": True, "result": result}
+
+
+@router.post("/reminders/send")
+async def send_reminders_now(
+    advocate=Depends(get_current_advocate),
+    db=Depends(get_db),
+):
+    """
+    Manually trigger the evening WhatsApp reminder for this advocate.
+    Sends push notifications for all hearings scheduled TOMORROW.
+    Useful for testing Expo push delivery end-to-end.
+    """
+    from scheduler import send_evening_reminders_for_advocate
+    result = await send_evening_reminders_for_advocate(db, advocate["id"])
+    return {"success": True, "result": result}

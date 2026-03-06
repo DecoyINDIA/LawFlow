@@ -155,7 +155,7 @@ export function AddHearingModal({
               </View>
 
               {/* Save Button */}
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+              <TouchableOpacity testID="save-hearing-btn" style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
                 <Text style={styles.saveBtnText}>{isEdit ? 'Save Changes' : 'Add Hearing'}</Text>
               </TouchableOpacity>
             </ScrollView>

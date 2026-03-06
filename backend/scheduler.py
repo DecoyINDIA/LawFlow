@@ -73,8 +73,21 @@ def start_scheduler(db) -> None:
         args=[db],
     )
 
+    # Job 3: Evening WhatsApp reminder — every day at 20:00 IST
+    _scheduler.add_job(
+        _evening_whatsapp_reminder_job,
+        CronTrigger(hour=20, minute=0, timezone=IST),
+        id="evening_reminder",
+        name="Evening WhatsApp Hearing Reminder",
+        replace_existing=True,
+        args=[db],
+    )
+
     _scheduler.start()
-    logger.info("⏰ Scheduler started — daily digest 08:00 IST | eCourts refresh Mon 08:05 IST")
+    logger.info(
+        "⏰ Scheduler started — daily digest 08:00 IST | eCourts refresh Mon 08:05 IST"
+        " | evening reminder 20:00 IST"
+    )
 
 
 def stop_scheduler() -> None:
@@ -369,6 +382,115 @@ async def _apply_date_update(
         )
 
     logger.info("🔄 Updated %s (CNR: %s) → new hearing on %s", case_id, cnr, date_str)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# JOB 3 — EVENING WHATSAPP HEARING REMINDER
+# ══════════════════════════════════════════════════════════════════════════
+
+async def _evening_whatsapp_reminder_job(db) -> None:
+    """Run at 20:00 IST — send push to advocate for every hearing scheduled TOMORROW."""
+    logger.info("📲 Running evening WhatsApp reminder job...")
+    try:
+        now_ist = datetime.now(IST)
+        tomorrow_start = (now_ist + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        tomorrow_end = tomorrow_start + timedelta(days=1)
+        t_start_ms = int(tomorrow_start.timestamp() * 1000)
+        t_end_ms = int(tomorrow_end.timestamp() * 1000)
+
+        hearings = await db.hearings.find(
+            {"hearingDate": {"$gte": t_start_ms, "$lt": t_end_ms}},
+            {"_id": 0, "id": 1, "advocateId": 1, "caseId": 1, "courtRoom": 1},
+        ).to_list(length=None)
+
+        if not hearings:
+            logger.info("📲 No hearings tomorrow — skipping evening reminder")
+            return
+
+        sent = 0
+        for h in hearings:
+            case = await db.cases.find_one(
+                {"id": h["caseId"]}, {"_id": 0, "title": 1, "courtName": 1}
+            )
+            advocate = await db.advocates.find_one(
+                {"id": h["advocateId"]}, {"_id": 0, "pushToken": 1}
+            )
+            push_token = (advocate or {}).get("pushToken")
+            if not push_token:
+                continue
+
+            court = h.get("courtRoom") or (case or {}).get("courtName", "court")
+            title = (case or {}).get("title", "your case")
+
+            result = await _send_push(
+                push_token,
+                title="📅 Hearing Reminder for Tomorrow",
+                body=f"{title} at {court}. Tap to send WhatsApp reminder to client.",
+                data={"type": "WHATSAPP_REMINDER", "caseId": h["caseId"]},
+            )
+            if result.get("ok"):
+                sent += 1
+
+        logger.info("📲 Evening reminder: sent %d/%d pushes", sent, len(hearings))
+    except Exception as exc:
+        logger.error("📲 Evening reminder job failed: %s", exc, exc_info=True)
+
+
+async def send_evening_reminders_for_advocate(db, advocate_id: str) -> dict:
+    """
+    Manual trigger: send evening reminder pushes for one advocate's
+    hearings scheduled for TOMORROW. Used by POST /api/notifications/reminders/send.
+    """
+    now_ist = datetime.now(IST)
+    tomorrow_start = (now_ist + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    tomorrow_end = tomorrow_start + timedelta(days=1)
+    t_start_ms = int(tomorrow_start.timestamp() * 1000)
+    t_end_ms = int(tomorrow_end.timestamp() * 1000)
+
+    hearings = await db.hearings.find(
+        {
+            "advocateId": advocate_id,
+            "hearingDate": {"$gte": t_start_ms, "$lt": t_end_ms},
+        },
+        {"_id": 0, "id": 1, "caseId": 1, "hearingDate": 1, "courtRoom": 1},
+    ).to_list(length=None)
+
+    advocate = await db.advocates.find_one({"id": advocate_id}, {"_id": 0})
+    push_token = (advocate or {}).get("pushToken")
+
+    results = []
+    for h in hearings:
+        case = await db.cases.find_one(
+            {"id": h["caseId"]}, {"_id": 0, "title": 1, "courtName": 1}
+        )
+        court = h.get("courtRoom") or (case or {}).get("courtName", "court")
+        title = (case or {}).get("title", "your case")
+        push_sent = False
+        if push_token:
+            result = await _send_push(
+                push_token,
+                title="📅 Hearing Reminder for Tomorrow",
+                body=f"{title} at {court}. Tap to send WhatsApp reminder to client.",
+                data={"type": "WHATSAPP_REMINDER", "caseId": h["caseId"]},
+            )
+            push_sent = result.get("ok", False)
+        results.append({
+            "caseId": h["caseId"],
+            "caseTitle": title,
+            "courtName": court,
+            "hearingDate": h["hearingDate"],
+            "pushSent": push_sent,
+        })
+
+    return {
+        "tomorrowHearings": len(hearings),
+        "pushTokenAvailable": bool(push_token),
+        "results": results,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════
