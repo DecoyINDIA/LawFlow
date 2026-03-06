@@ -30,6 +30,12 @@ CURRENT STATUS — Phase 16 COMPLETE
 
 Phase 15 — Multi-Advocate Firm Mode, Client Portal, eCourts High Court   COMPLETE
 Phase 16 — EAS projectId + Emergent platform migration                   COMPLETE
+Phase 17 — WhatsApp Integration for Hearing Reminders                    COMPLETE
+  - Feature 1: Green reminder banner on Case Detail (today/tomorrow hearings)
+  - Feature 2: Enhanced outcome notification with outcome text + next date
+  - Feature 3: Send Update sheet with 3 templates (General, Doc Request, Next Hearing)
+  - Backend Job 3: APScheduler 8 PM IST evening reminder + manual /reminders/send endpoint
+  - 8 unit tests in backend/tests/test_scheduler_reminders.py (all passing)
   - EAS projectId: 940a89bf-27e1-44e1-b036-9f64bc3e92a4
   - Owner: decoyindia
   - EAS Project: https://expo.dev/accounts/decoyindia/projects/lawflow

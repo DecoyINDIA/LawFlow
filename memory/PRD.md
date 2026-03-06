@@ -1,5 +1,5 @@
 # LawFlow — Product Requirements Document
-# Updated: 2026-03-06 (Phase 16)
+# Updated: 2026-03-06 (Phase 17)
 
 ================================================================================
 PROBLEM STATEMENT
@@ -46,6 +46,7 @@ Phase 14 (Case auto-refresh)  Weekly eCourts auto-refresh cron + manual trigger 
 Phase 15 (Firm + Portal)      Multi-advocate firm mode, Client Portal (read-only links),
                                eCourts High Court support (5 HCs)
 Phase 16 (EAS + Emergent)     EAS projectId configured, migrated to Emergent platform
+Phase 17 (WhatsApp)          Hearing reminders, outcome notification, Send Update sheet
 
 ================================================================================
 CORE BACKEND ROUTES (all prefixed /api)
