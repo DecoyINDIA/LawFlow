@@ -310,21 +310,12 @@ function buildCaseHTML(data: CaseReportData): string {
 
 export async function printDashboardReport(data: DashboardReportData): Promise<void> {
   const html = buildDashboardHTML(data);
-  const fileName = `CauseList_${fmtDateForFilename(Date.now())}`;
   try {
     if (Platform.OS === 'web') {
-      await Print.printAsync({ html });
-    } else {
-      const { uri } = await Print.printToFileAsync({ html });
-      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
-      const namedUri = `${dir}${fileName}.pdf`;
-      await FileSystem.moveAsync({ from: uri, to: namedUri });
-      await Sharing.shareAsync(namedUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Daily Cause List',
-        UTI: 'com.adobe.pdf',
-      });
+      Alert.alert('Print', 'Printing is not supported in the browser. Please use the app.');
+      return;
     }
+    await Print.printAsync({ html });
   } catch (err) {
     Alert.alert('Print Error', 'Unable to generate PDF. Please try again.');
   }
@@ -332,21 +323,12 @@ export async function printDashboardReport(data: DashboardReportData): Promise<v
 
 export async function printCaseReport(data: CaseReportData): Promise<void> {
   const html = buildCaseHTML(data);
-  const fileName = `${safeFilename(data.case.caseNumber)}_Report`;
   try {
     if (Platform.OS === 'web') {
-      await Print.printAsync({ html });
-    } else {
-      const { uri } = await Print.printToFileAsync({ html });
-      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
-      const namedUri = `${dir}${fileName}.pdf`;
-      await FileSystem.moveAsync({ from: uri, to: namedUri });
-      await Sharing.shareAsync(namedUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: `Case Report — ${data.case.caseNumber}`,
-        UTI: 'com.adobe.pdf',
-      });
+      Alert.alert('Print', 'Printing is not supported in the browser. Please use the app.');
+      return;
     }
+    await Print.printAsync({ html });
   } catch (err) {
     Alert.alert('Print Error', 'Unable to generate PDF. Please try again.');
   }
@@ -758,29 +740,11 @@ function safeFilename(name: string): string {
 async function generateAndShare(html: string, title: string, fileName: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
-      // Web: open a new window with the HTML and trigger print
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-      } else {
-        // Fallback: try expo-print
-        await Print.printAsync({ html });
-      }
-    } else {
-      const { uri } = await Print.printToFileAsync({ html });
-      // Rename UUID filename to human-readable filename
-      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
-      const namedUri = `${dir}${fileName}.pdf`;
-      await FileSystem.moveAsync({ from: uri, to: namedUri });
-      await Sharing.shareAsync(namedUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: title,
-        UTI: 'com.adobe.pdf',
-      });
+      Alert.alert('Print', 'Printing is not supported in the browser. Please use the app.');
+      return;
     }
+    // Native: open system print dialog directly (Android print framework / AirPrint on iOS)
+    await Print.printAsync({ html });
   } catch (err) {
     Alert.alert('Print Error', 'Unable to print. Please try again.');
   }

@@ -219,6 +219,35 @@ Files changed: `backend/routes/referral.py` (new), `backend/routes/auth.py`, `ba
 
 5. **`frontend/app/settings.tsx`** — NOT modified (presence check already at lines 516–550 ✅)
 
+## Session: FIX J (2026-03-10)
+
+### FIX J — Print opens share sheet instead of system print dialog ✅ COMPLETE
+
+**File:** `frontend/src/utils/pdfReports.ts`
+
+**Root cause:** All print functions used `Print.printToFileAsync()` → `FileSystem.moveAsync()` → `Sharing.shareAsync()`. `Sharing.shareAsync()` opens the Android share sheet (Choose app to share with), NOT the Android system print dialog.
+
+**Fix:** Replaced `printToFileAsync + moveAsync + shareAsync` chain with `Print.printAsync({ html })` in all 3 print-specific functions. `Print.printAsync` triggers the native system print dialog on both Android (Android Print Framework) and iOS (AirPrint).
+
+**Changes (3 functions in `frontend/src/utils/pdfReports.ts`):**
+
+| Function | Lines (before) | Change |
+|----------|----------------|--------|
+| `generateAndShare` | 758–787 | Replaced web popup + `printToFileAsync + moveAsync + shareAsync` with: web → `Alert.alert('Print', 'Printing is not supported...')`, native → `Print.printAsync({ html })` |
+| `printDashboardReport` | 311–331 | Removed `printToFileAsync + moveAsync + shareAsync`; web → Alert, native → `Print.printAsync({ html })` |
+| `printCaseReport` | 333–353 | Removed `printToFileAsync + moveAsync + shareAsync`; web → Alert, native → `Print.printAsync({ html })` |
+
+**NOT modified (share/export functions — correct to use Sharing.shareAsync):**
+- `exportFullData` (lines 459–479) — export function, kept as-is ✅
+- `exportCasesCSV` (lines 482–526) — CSV share, kept as-is ✅
+
+**Web behaviour:** `Alert.alert('Print', 'Printing is not supported in the browser. Please use the app.')` — consistent across all print functions.
+
+**Note:** `fileName` parameter kept in `generateAndShare` signature (callers unchanged) but no longer used since `printAsync` does not write to a file.
+
+### FIX F — Device Calendar Sync ✅ CLOSED — BY DESIGN
+Device calendar sync depends on the user's Google account linked to the device calendar app. This is an OS-level dependency, not a code issue. `expo-calendar` correctly requests permissions and syncs to the default device calendar. No code change required.
+
 ## Next Immediate Action
 **Push to GitHub → Submit EAS development build → on-device test pass**
 
