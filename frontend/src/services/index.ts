@@ -1,0 +1,20 @@
+// Re-export all API service functions from a single entry point
+export {
+  storeToken,
+  clearToken,
+  requestOtp,
+  verifyOtp,
+  getMe,
+  getCases,
+  createCase,
+  updateCase,
+  deleteCase,
+  getClients,
+  createClient,
+  updateClient,
+  deleteClient,
+  getHearings,
+  createHearing,
+  updateHearing,
+  deleteHearing,
+} from './api';
