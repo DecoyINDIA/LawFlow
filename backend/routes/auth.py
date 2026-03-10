@@ -194,6 +194,8 @@ async def verify_otp(body: OTPVerify, db=Depends(get_db)):
             "id": str(uuid.uuid4()),
             "phone": db_phone,
             "name": None,
+            "plan": "free",
+            "planExpiry": None,
             "referralCode": code,
             "referredBy": None,
             "referralRedeemedAt": None,

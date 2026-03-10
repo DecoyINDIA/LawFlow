@@ -58,6 +58,12 @@ All core features are implemented. Testing across 15 modules completed.
 - Offline mode simulation (browser DevTools cannot simulate native network)
 - Razorpay in-app SDK (uses Linking.openURL redirect on web)
 
+## Bug Fixes Applied (2026-03-10 Session 2)
+- **FIX 1 — Intro video blank on device**: Added `"assetBundlePatterns": ["assets/**/*"]` to `app.json` — ensures `intro.mp4` is bundled in native builds.
+- **FIX 2 — New signup Pro status**: `verify-otp` now explicitly sets `plan="free"`, `planExpiry=None` for all new accounts; `APP_ENV=development` only bypasses OTP, never sets plan.
+- **FIX 3 — PDF filenames**: `pdfReports.ts` uses `FileSystem.moveAsync` to rename UUID temp files before sharing. All 6+ PDF functions produce human-readable names: `CauseList_10Mar2026.pdf`, `CaseNumber_Report.pdf`, `ClientName_Report.pdf`.
+- **FIX 4 — Case detail Quick Actions**: Replaced emoji buttons (📱📬📤) with Ionicons dark card row matching `clients/[id].tsx` design: `chatbubble-outline`, `logo-whatsapp` (#25D366), `paper-plane-outline` in `#1A1A1A` rounded cards.
+
 ## Bug Fixes Applied (2026-03-09)
 - **Case Delete Crash (FIXED)**: `printingHistory` useState was declared after early return in `cases/[id].tsx`, causing React hooks violation crash. Moved to before early return.
 - **Duplicate Upcoming Hearings (FIXED)**: `upcomingFromCases` now deduplicates against `upcomingHearings` using `coveredCaseIds` Set in `(tabs)/index.tsx`.

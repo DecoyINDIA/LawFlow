@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors, ColorPalette, Typography, Spacing, Radius } from '../../src/theme';
 import { useApp } from '../../src/context/AppContext';
@@ -708,38 +708,36 @@ export default function CaseDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Permanent Contact Buttons */}
-            <View style={styles.contactButtons}>
+            {/* Quick Actions */}
+            <View style={styles.caseActionsRow}>
               <TouchableOpacity
-                style={styles.smsButton}
+                testID="client-text-btn"
+                style={styles.caseActionBtn}
                 onPress={handleOpenComposer}
                 activeOpacity={0.8}
-                testID="client-text-btn"
               >
-                <Text style={styles.smsButtonIcon}>📱</Text>
-                <Text style={styles.smsButtonText}>Text</Text>
+                <Ionicons name="chatbubble-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.caseActionText}>Text</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.whatsappButton}
+                testID="client-whatsapp-btn"
+                style={styles.caseActionBtn}
                 onPress={handleOpenComposer}
                 activeOpacity={0.8}
-                testID="client-whatsapp-btn"
               >
-                <Text style={styles.whatsappButtonIcon}>💬</Text>
-                <Text style={styles.whatsappButtonText}>WhatsApp</Text>
+                <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                <Text style={styles.caseActionText}>WhatsApp</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="send-update-btn"
+                style={styles.caseActionBtn}
+                onPress={handleOpenUpdateSheet}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="paper-plane-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.caseActionText}>Send Update</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Feature 3: Send Update button */}
-            <TouchableOpacity
-              testID="send-update-btn"
-              style={styles.sendUpdateBtn}
-              onPress={handleOpenUpdateSheet}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.sendUpdateIcon}>📤</Text>
-              <Text style={styles.sendUpdateText}>Send Update</Text>
-            </TouchableOpacity>
 
             {/* Feature 1: Hearing Reminder Banner — today / tomorrow */}
             {reminderHearing && (
@@ -1592,6 +1590,28 @@ const makeStyles = (c: ColorPalette) => StyleSheet.create({
   clientName: { ...Typography.subhead, fontWeight: '600', color: c.textPrimary },
   clientSub: { ...Typography.caption1, color: c.textSecondary },
   callBtn: { width: 40, height: 40, backgroundColor: c.surfaceHighlight, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+
+  // Case Quick Actions (Ionicons dark card row)
+  caseActionsRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+  },
+  caseActionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    marginHorizontal: 4,
+  },
+  caseActionText: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    color: '#888888',
+    marginTop: 4,
+  },
 
   // Contact Buttons
   contactButtons: { flexDirection: 'row', gap: Spacing.s },

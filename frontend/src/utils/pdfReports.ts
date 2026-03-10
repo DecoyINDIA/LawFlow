@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { Platform, Alert, Share } from 'react-native';
 import { Case, Client, Hearing } from '../types';
 
@@ -309,12 +310,16 @@ function buildCaseHTML(data: CaseReportData): string {
 
 export async function printDashboardReport(data: DashboardReportData): Promise<void> {
   const html = buildDashboardHTML(data);
+  const fileName = `CauseList_${fmtDateForFilename(Date.now())}`;
   try {
     if (Platform.OS === 'web') {
       await Print.printAsync({ html });
     } else {
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, {
+      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
+      const namedUri = `${dir}${fileName}.pdf`;
+      await FileSystem.moveAsync({ from: uri, to: namedUri });
+      await Sharing.shareAsync(namedUri, {
         mimeType: 'application/pdf',
         dialogTitle: 'Daily Cause List',
         UTI: 'com.adobe.pdf',
@@ -327,12 +332,16 @@ export async function printDashboardReport(data: DashboardReportData): Promise<v
 
 export async function printCaseReport(data: CaseReportData): Promise<void> {
   const html = buildCaseHTML(data);
+  const fileName = `${safeFilename(data.case.caseNumber)}_Report`;
   try {
     if (Platform.OS === 'web') {
       await Print.printAsync({ html });
     } else {
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, {
+      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
+      const namedUri = `${dir}${fileName}.pdf`;
+      await FileSystem.moveAsync({ from: uri, to: namedUri });
+      await Sharing.shareAsync(namedUri, {
         mimeType: 'application/pdf',
         dialogTitle: `Case Report — ${data.case.caseNumber}`,
         UTI: 'com.adobe.pdf',
@@ -449,12 +458,16 @@ function buildFullDataHTML(data: FullDataExportInput): string {
 
 export async function exportFullData(data: FullDataExportInput): Promise<void> {
   const html = buildFullDataHTML(data);
+  const fileName = `LawFlow_FullExport_${fmtDateForFilename(Date.now())}`;
   try {
     if (Platform.OS === 'web') {
       await Print.printAsync({ html });
     } else {
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, {
+      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
+      const namedUri = `${dir}${fileName}.pdf`;
+      await FileSystem.moveAsync({ from: uri, to: namedUri });
+      await Sharing.shareAsync(namedUri, {
         mimeType: 'application/pdf',
         dialogTitle: 'LawFlow — Full Data Export',
         UTI: 'com.adobe.pdf',
@@ -732,7 +745,17 @@ const printCSS = `
   }
 `;
 
-async function generateAndShare(html: string, title: string): Promise<void> {
+// ── Filename helpers ─────────────────────────────────────────────────
+function fmtDateForFilename(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getDate().toString().padStart(2, '0')}${MONTHS[d.getMonth()]}${d.getFullYear()}`;
+}
+
+function safeFilename(name: string): string {
+  return name.replace(/[\/\\:\s*?"<>|]/g, '').trim();
+}
+
+async function generateAndShare(html: string, title: string, fileName: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
       // Web: open a new window with the HTML and trigger print
@@ -748,7 +771,11 @@ async function generateAndShare(html: string, title: string): Promise<void> {
       }
     } else {
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, {
+      // Rename UUID filename to human-readable filename
+      const dir = uri.substring(0, uri.lastIndexOf('/') + 1);
+      const namedUri = `${dir}${fileName}.pdf`;
+      await FileSystem.moveAsync({ from: uri, to: namedUri });
+      await Sharing.shareAsync(namedUri, {
         mimeType: 'application/pdf',
         dialogTitle: title,
         UTI: 'com.adobe.pdf',
@@ -809,7 +836,7 @@ function buildCauseListHTML(data: CauseListReportInput): string {
 
 export async function printCauseList(data: CauseListReportInput): Promise<void> {
   const html = buildCauseListHTML(data);
-  await generateAndShare(html, `Cause List — ${fmtDatePrint(Date.now())}`);
+  await generateAndShare(html, `Cause List — ${fmtDateForFilename(Date.now())}`, `CauseList_${fmtDateForFilename(Date.now())}`);
 }
 
 // ── Report 2: Case Detail Report ─────────────────────────────────────
@@ -913,7 +940,7 @@ function buildCaseDetailHTML(data: CaseDetailReportInput): string {
 
 export async function printCaseDetail(data: CaseDetailReportInput): Promise<void> {
   const html = buildCaseDetailHTML(data);
-  await generateAndShare(html, `Case Report — ${data.caseData.caseNumber}`);
+  await generateAndShare(html, `Case Report — ${data.caseData.caseNumber}`, `${safeFilename(data.caseData.caseNumber)}_Report`);
 }
 
 // ── Report 3: Client Summary ─────────────────────────────────────────
@@ -994,7 +1021,7 @@ function buildClientSummaryHTML(data: ClientSummaryReportInput): string {
 
 export async function printClientSummary(data: ClientSummaryReportInput): Promise<void> {
   const html = buildClientSummaryHTML(data);
-  await generateAndShare(html, `Client Summary — ${data.client.name}`);
+  await generateAndShare(html, `Client Summary — ${data.client.name}`, `${safeFilename(data.client.name)}_Report`);
 }
 
 // ── Report 4: Hearing History ────────────────────────────────────────
@@ -1055,5 +1082,5 @@ function buildHearingHistoryHTML(data: HearingHistoryReportInput): string {
 
 export async function printHearingHistory(data: HearingHistoryReportInput): Promise<void> {
   const html = buildHearingHistoryHTML(data);
-  await generateAndShare(html, `Hearing History — ${data.caseData.caseNumber}`);
+  await generateAndShare(html, `Hearing History — ${data.caseData.caseNumber}`, `${safeFilename(data.caseData.caseNumber)}_HearingHistory`);
 }

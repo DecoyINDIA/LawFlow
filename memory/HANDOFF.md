@@ -133,6 +133,52 @@ Files changed: `backend/routes/referral.py` (new), `backend/routes/auth.py`, `ba
 - Removed ternary null check: display now always renders the actual stats string
 - Referral code `XXXXR5UC` shows correctly from AppContext (loaded from `/api/auth/me` response)
 
+## Session: 4 Bug Fixes (2026-03-10)
+
+### FIX 1 — Intro Video Blank on Device (Asset Bundling) ✅ PASS
+**Root cause:** `assetBundlePatterns` was missing from `app.json`, so `intro.mp4` was not included in the native bundle.
+
+**Fixes applied:**
+- `app.json`: Added `"assetBundlePatterns": ["assets/**/*"]` inside the `"expo"` object
+- `require('../assets/intro.mp4')` path in `intro.tsx` was already correct ✅
+- `index.tsx` already routes to `/intro` on every cold launch via `introShown` flag ✅
+
+### FIX 2 — New Signup Incorrectly Showing Pro Status ✅ PASS
+**Root cause:** New advocate document created in `verify-otp` did not include a `plan` field, leaving it `null`/absent in MongoDB. Frontend may interpret missing plan incorrectly.
+
+**Fix:** `backend/routes/auth.py` — new advocate document now explicitly sets:
+- `"plan": "free"` and `"planExpiry": None` on all new signups
+- `APP_ENV=development` only affects OTP bypass — zero effect on plan assignment
+- `PROTECTED_NUMBERS` (9538556555, 9861960969) still auto-set to lifetime Pro ✅
+
+**Verified:** curl test with `8888888888` → `plan: "free"` confirmed ✅
+
+### FIX 3 — PDF Filename UUID → Human Readable ✅ PASS
+**Root cause:** `printToFileAsync` generated UUID-based temp paths; no renaming before `Sharing.shareAsync`.
+
+**Fixes applied in `frontend/src/utils/pdfReports.ts`:**
+- Added `import * as FileSystem from 'expo-file-system'`
+- Added helpers: `fmtDateForFilename(ts)` → `DDMmmYYYY`, `safeFilename(name)` → strips `/\:*?"<>| `
+- Updated `generateAndShare(html, title, fileName)` — uses `FileSystem.moveAsync` to rename before sharing
+- All 6 PDF functions updated with human-readable filenames:
+  - `printCauseList` → `CauseList_10Mar2026.pdf`
+  - `printCaseDetail` → `CRL2026TBW9876_Report.pdf`
+  - `printClientSummary` → `RajeshSharma_Report.pdf`
+  - `printHearingHistory` → `CRL2026TBW9876_HearingHistory.pdf`
+  - `printDashboardReport` → `CauseList_10Mar2026.pdf`
+  - `printCaseReport` → `CaseNumber_Report.pdf`
+  - `exportFullData` → `LawFlow_FullExport_10Mar2026.pdf`
+
+### FIX 4 — Case Detail Quick Actions Redesign ✅ PASS
+**Changes applied in `frontend/app/cases/[id].tsx`:**
+- Added `Ionicons` to `@expo/vector-icons` import (alongside existing `Feather`)
+- Replaced emoji-based `contactButtons` (📱 Text, 💬 WhatsApp) + `sendUpdateBtn` (📤) section with a single `caseActionsRow` horizontal flex row containing 3 dark card buttons:
+  - Text → `chatbubble-outline` #FFFFFF
+  - WhatsApp → `logo-whatsapp` #25D366
+  - Send Update → `paper-plane-outline` #FFFFFF
+- Styles added: `caseActionsRow`, `caseActionBtn` (#1A1A1A bg, borderRadius 12, paddingVertical 12, marginHorizontal 4), `caseActionText` (fontSize 11, #888888)
+- All `onPress` handlers (`handleOpenComposer`, `handleOpenUpdateSheet`) and `testID`s unchanged
+
 ## Next Immediate Action
 **Push to GitHub → Submit EAS development build → on-device test pass**
 
