@@ -179,6 +179,46 @@ Files changed: `backend/routes/referral.py` (new), `backend/routes/auth.py`, `ba
 - Styles added: `caseActionsRow`, `caseActionBtn` (#1A1A1A bg, borderRadius 12, paddingVertical 12, marginHorizontal 4), `caseActionText` (fontSize 11, #888888)
 - All `onPress` handlers (`handleOpenComposer`, `handleOpenUpdateSheet`) and `testID`s unchanged
 
+## Session: FIX 7 + FIX D (2026-03-10)
+
+### FIX 7 — Restore "Notify Client" WhatsApp button on case detail screen ✅ PASS
+
+**File:** `frontend/app/cases/[id].tsx`
+
+**Lines changed:** 711–740 (Quick Actions row, `caseActionsRow` View)
+
+- Added 4th dark card button to the Quick Actions row: **"Notify Client"**
+- Icon: `logo-whatsapp` color `#25D366` (Ionicons — already imported)
+- `testID="notify-client-whatsapp-btn"`
+- Handler (inline `onPress`):
+  1. Guards missing `client?.phone` → `Alert.alert('No Client', ...)`
+  2. Formats message: `"Hello, this is a reminder about your case [caseNumber] scheduled for [nextHearingDate]. Please be available."` using existing `fmtDate(caseData.nextHearingDate)`
+  3. `Platform.OS === 'web'` guard → `Alert.alert('WhatsApp', 'Open WhatsApp to notify the client on device.')`
+  4. Native: strips non-digits + leading `91`, opens `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`
+- No other handlers, styles, or testIDs modified
+- `Linking` was already imported from `react-native` (line 33) — no new imports needed
+
+### FIX D — Wire Google Drive OAuth Client ID ✅ PASS
+
+**Files changed:**
+
+1. **`frontend/.env`** (line 6 added):
+   ```
+   EXPO_PUBLIC_GOOGLE_CLIENT_ID=131462869503-u0ahuk4lk0qe6u1ruagoud1q3ig5qr3q.apps.googleusercontent.com
+   ```
+
+2. **`frontend/.env.example`** (NEW FILE created):
+   ```
+   EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
+   ```
+
+3. **`frontend/.gitignore`** (line 35 added):
+   - Added `.env` to the `# local env files` block (was only `.env*.local` before — plain `.env` was NOT git-ignored)
+
+4. **`frontend/src/services/googleDrive.ts`** — NOT modified (null-guard already present at line 28–30 ✅)
+
+5. **`frontend/app/settings.tsx`** — NOT modified (presence check already at lines 516–550 ✅)
+
 ## Next Immediate Action
 **Push to GitHub → Submit EAS development build → on-device test pass**
 

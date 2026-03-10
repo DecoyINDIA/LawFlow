@@ -737,6 +737,30 @@ export default function CaseDetailScreen() {
                 <Ionicons name="paper-plane-outline" size={20} color="#FFFFFF" />
                 <Text style={styles.caseActionText}>Send Update</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                testID="notify-client-whatsapp-btn"
+                style={styles.caseActionBtn}
+                onPress={() => {
+                  if (!client?.phone) {
+                    Alert.alert('No Client', 'No client phone number linked to this case.');
+                    return;
+                  }
+                  const hearingDateStr = caseData?.nextHearingDate
+                    ? fmtDate(caseData.nextHearingDate)
+                    : 'the scheduled date';
+                  const msg = `Hello, this is a reminder about your case ${caseData?.caseNumber ?? ''} scheduled for ${hearingDateStr}. Please be available.`;
+                  if (Platform.OS === 'web') {
+                    Alert.alert('WhatsApp', 'Open WhatsApp to notify the client on device.');
+                    return;
+                  }
+                  const phone = client.phone.replace(/\D/g, '').replace(/^91/, '');
+                  Linking.openURL(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                <Text style={styles.caseActionText}>Notify Client</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Feature 1: Hearing Reminder Banner — today / tomorrow */}
